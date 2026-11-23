@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIA-P Toko Hambali | Sistem Informasi Akuntansi & Perpajakan</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo">TH</div>
+      <div>
+        <h1>SIA-P TOKO HAMBALI</h1>
+        <p>Jl. Raya Patimura, Loram Kulon No. 643 | WP OP (Belum PKP)</p>
+      </div>
+    </div>
+    <div class="topbar-controls">
+      <div class="legend-pills">
+        <span class="pill pill-white">Putih: Input</span>
+        <span class="pill pill-gray">Abu: Otomatis</span>
+        <span class="pill pill-yellow">Kuning: Otorisasi PIN</span>
+      </div>
+      <div class="role-switcher">
+        <label for="roleSelect">Peran Aktif:</label>
+        <select id="roleSelect" onchange="switchRole(this.value)">
+          <option value="pemilik">Pemilik (PIN: 1234)</option>
+          <option value="penjaga">Penjaga Toko</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <div class="app-container">
+    <!-- SIDEBAR NAVIGASI (VTOC) -->
+    <aside class="sidebar">
+      <div class="nav-group">
+        <div class="nav-title">UTAMA</div>
+        <button class="nav-btn active" data-tab="dashboard" onclick="openTab('dashboard')">Dashboard Ringkasan</button>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-title">1. MODUL MASTER DATA</div>
+        <button class="nav-btn" data-tab="master-barang" onclick="openTab('master-barang')">1.1 Barang & Harga Jual</button>
+        <button class="nav-btn" data-tab="master-coa" onclick="openTab('master-coa')">1.4 Daftar Akun (SAK EMKM)</button>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-title">2. MODUL TRANSAKSI</div>
+        <button class="nav-btn" data-tab="pos" onclick="openTab('pos')">2.1 Penjualan di Toko (POS)</button>
+        <button class="nav-btn" data-tab="wa-order" onclick="openTab('wa-order')">2.2 Pesanan WA & Antar</button>
+        <button class="nav-btn owner-only" data-tab="pembelian" onclick="openTab('pembelian')">2.3/2.4 Pembelian, Beban & Prive</button>
+        <button class="nav-btn" data-tab="opname" onclick="openTab('opname')">2.5/2.6 Opname & Barang Rusak</button>
+        <button class="nav-btn" data-tab="rekonsiliasi" onclick="openTab('rekonsiliasi')">2.7 Rekonsiliasi Kas Harian</button>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-title">3. MODUL LAPORAN</div>
+        <button class="nav-btn owner-only" data-tab="laba-rugi" onclick="openTab('laba-rugi')">3.1 Laporan Laba Rugi</button>
+        <button class="nav-btn owner-only" data-tab="neraca" onclick="openTab('neraca')">3.2 Laporan Posisi Keuangan</button>
+        <button class="nav-btn owner-only" data-tab="pajak" onclick="openTab('pajak')">3.3 Rekap Pajak PPh Final 0,5%</button>
+        <button class="nav-btn" data-tab="lap-stok" onclick="openTab('lap-stok')">3.5 Stok & Peringatan ED</button>
+        <button class="nav-btn owner-only" data-tab="arus-kas" onclick="openTab('arus-kas')">3.6 Rekap Arus Kas</button>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-title">4. PENGATURAN & KEAMANAN</div>
+        <button class="nav-btn owner-only" data-tab="jurnal" onclick="openTab('jurnal')">Buku Besar & Jurnal Otomatis</button>
+        <button class="nav-btn owner-only" data-tab="audit" onclick="openTab('audit')">4.2 Log Audit & Backup</button>
+      </div>
+    </aside>
+
+    <!-- KONTEN UTAMA -->
+    <main class="main-content">
+      <!-- TAB: DASHBOARD -->
+      <section id="tab-dashboard" class="tab-panel active">
+        <div class="section-header">
+          <h2>Dashboard Operasional & Keuangan (November 2026)</h2>
+          <span class="badge-status badge-green" id="dashRoleBadge">Akses: Pemilik</span>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <span class="kpi-label">Kas Usaha (1101)</span>
+            <strong class="kpi-value" id="kpiKas">Rp 0</strong>
+            <small>Terpisah dari Prive (3103)</small>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Penjualan Bulan Ini (4101)</span>
+            <strong class="kpi-value" id="kpiPenjualan">Rp 0</strong>
+            <small>POS Toko + Pesanan WhatsApp</small>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Laba Bersih Berjalan</span>
+            <strong class="kpi-value" id="kpiLaba">Rp 0</strong>
+            <small>Standar SAK EMKM</small>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Omzet Kumulatif 2026</span>
+            <strong class="kpi-value" id="kpiOmzetTahun">Rp 0</strong>
+            <small id="kpiPajakStatus">Bebas PPh Final (&lt; Rp500 Jt)</small>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>Peringatan Pengendalian Stok & Kedaluwarsa (FEFO)</h3>
+            <div id="dashAlerts" class="alert-list"></div>
+          </div>
+          <div class="card">
+            <h3>Riwayat Transaksi Penjualan Terakhir</h3>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>No. Nota</th>
+                  <th>Kanal</th>
+                  <th>Total</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="dashRecentSales"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 1.1: MASTER BARANG -->
+      <section id="tab-master-barang" class="tab-panel">
+        <div class="section-header">
+          <h2>Menu 1.1 | Master Data Barang & Harga Jual</h2>
+        </div>
+
+        <div class="card owner-only" id="formMasterBarangCard">
+          <h3>Tambah / Perbarui Master Barang (Otorisasi Pemilik)</h3>
+          <form id="formAddBarang" class="form-grid-4" onsubmit="handleSaveBarang(event)">
+            <div>
+              <label>Kode Barang</label>
+              <input type="text" id="mKode" class="input-white" placeholder="BRG-070" required />
+            </div>
+            <div>
+              <label>Nama Barang</label>
+              <input type="text" id="mNama" class="input-white" placeholder="Gula Pasir 1 kg" required />
+            </div>
+            <div>
+              <label>Satuan</label>
+              <input type="text" id="mSatuan" class="input-white" placeholder="kg / btl / pak" required />
+            </div>
+            <div>
+              <label>Batas Min. Stok</label>
+              <input type="number" id="mMinStok" class="input-white" value="10" min="1" required />
+            </div>
+            <div>
+              <label>Harga Beli / HPP (Rp)</label>
+              <input type="number" id="mHargaBeli" class="input-white" min="100" required />
+            </div>
+            <div>
+              <label>Harga Jual (Rp)</label>
+              <input type="number" id="mHargaJual" class="input-white" min="100" required />
+            </div>
+            <div>
+              <label>Stok Awal</label>
+              <input type="number" id="mStok" class="input-white" value="0" min="0" required />
+            </div>
+            <div>
+              <label>Tgl Kedaluwarsa (ED)</label>
+              <input type="date" id="mEd" class="input-white" />
+            </div>
+            <div class="full-col">
+              <button type="submit" class="btn btn-primary">Simpan ke Master Barang</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Kode</th>
+                <th>Nama Barang</th>
+                <th>Sat.</th>
+                <th>Harga Beli</th>
+                <th>Harga Jual</th>
+                <th>Margin</th>
+                <th>Stok</th>
+                <th>Min.</th>
+                <th>ED Terdekat</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyMasterBarang"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 1.4: COA -->
+      <section id="tab-master-coa" class="tab-panel">
+        <div class="section-header">
+          <h2>Menu 1.4 | Daftar Akun (Chart of Accounts - SAK EMKM)</h2>
+        </div>
+        <div class="card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Kode Akun</th>
+                <th>Nama Akun</th>
+                <th>Kelompok</th>
+                <th>Saldo Normal</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyCoa"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 2.1: POS PENJUALAN -->
+      <section id="tab-pos" class="tab-panel">
+        <div class="section-header">
+          <h2>Menu 2.1 | Penjualan di Toko (POS)</h2>
+        </div>
+        <div class="card">
+          <div class="form-grid-4 mb-16">
+            <div>
+              <label>No. Nota (Otomatis)</label>
+              <input type="text" id="posNoNota" class="input-gray" readonly />
+            </div>
+            <div>
+              <label>Tanggal</label>
+              <input type="text" id="posTanggal" class="input-gray" readonly />
+            </div>
+            <div>
+              <label>Dilayani Oleh</label>
+              <input type="text" id="posKasir" class="input-gray" readonly />
+            </div>
+            <div>
+              <label>Pembeli (Opsional)</label>
+              <input type="text" id="posPembeli" class="input-white" value="Umum" />
+            </div>
+          </div>
+
+          <div class="pos-add-bar">
+            <select id="posSelectBarang" class="input-white">
+              <option value="">-- Pilih Barang --</option>
+            </select>
+            <input type="number" id="posQty" class="input-white" placeholder="Qty" min="1" value="1" />
+            <input type="number" id="posItemDiskon" class="input-white" placeholder="Diskon Item (Rp)" min="0" value="0" />
+            <button type="button" class="btn btn-secondary" onclick="addPosItem()">+ Tambah Item</button>
+          </div>
+
+          <table class="data-table mt-12">
+            <thead>
+              <tr>
+                <th>Kode</th>
+                <th>Nama Barang</th>
+                <th>Harga (Auto)</th>
+                <th>Stok (Auto)</th>
+                <th>Qty</th>
+                <th>Diskon (Rp)</th>
+                <th>Subtotal (Auto)</th>
+                <th>Hapus</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyPosCart"></tbody>
+          </table>
+
+          <div class="pos-summary-grid mt-16">
+            <div>
+              <label>Uang Dibayar Tunai (Rp)</label>
+              <input type="number" id="posBayar" class="input-white" oninput="calcPosSummary()" placeholder="0" />
+              <label class="mt-8">Kembalian (Rp)</label>
+              <input type="text" id="posKembalian" class="input-gray" readonly value="Rp 0" />
+            </div>
+            <div class="summary-box">
+              <div class="sum-row"><span>Subtotal</span><strong id="posSubtotal">Rp 0</strong></div>
+              <div class="sum-row">
+                <span>Diskon Tambahan (>Rp5.000 butuh PIN)</span>
+                <input type="number" id="posExtraDiskon" class="input-yellow small-input" value="0" min="0" oninput="calcPosSummary()" />
+              </div>
+              <div class="sum-row"><span>DPP (Dasar Pengenaan Pajak)</span><span id="posDpp">Rp 0</span></div>
+              <div class="sum-row"><span>PPN (Non-PKP = 0)</span><span>Rp 0</span></div>
+              <div class="sum-row total-row"><span>TOTAL BAYAR</span><strong id="posTotal">Rp 0</strong></div>
+            </div>
+          </div>
+
+          <div class="action-bar mt-16">
+            <button type="button" class="btn btn-primary" onclick="submitPosSale()">SIMPAN & CETAK NOTA</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2.2: PESANAN WHATSAPP -->
+      <section id="tab-wa-order" class="tab-panel">
+        <div class="section-header">
+          <h2>Menu 2.2 | Pesanan WhatsApp, Surat Jalan & Tanda Terima</h2>
+        </div>
+
+        <div class="card">
+          <h3>Catat Pesanan Baru dari Chat WhatsApp</h3>
+          <form onsubmit="submitWaOrder(event)" class="form-grid-4">
+            <div>
+              <label>Nama Pembeli</label>
+              <input type="text" id="waNama" class="input-white" placeholder="Bu Siti" required />
+            </div>
+            <div>
+              <label>No. WhatsApp</label>
+              <input type="text" id="waPhone" class="input-white" placeholder="0812-XXXX-XXXX" required />
+            </div>
+            <div>
+              <label>Alamat Antar</label>
+              <input type="text" id="waAlamat" class="input-white" placeholder="Jl. Patimura, Loram Kulon" required />
+            </div>
+            <div>
+              <label>Metode</label>
+              <select id="waMetode" class="input-white">
+                <option value="Diantar">Diantar Kurir</option>
+                <option value="Diambil">Diambil di Toko</option>
+              </select>
+            </div>
+            <div>
+              <label>Pilih Barang</label>
+              <select id="waBarang" class="input-white" required></select>
+            </div>
+            <div>
+              <label>Qty</label>
+              <input type="number" id="waQty" class="input-white" value="1" min="1" required />
+            </div>
+            <div class="full-col">
+              <button type="submit" class="btn btn-primary">Buat Pesanan & Surat Jalan</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <h3>Daftar Pengiriman & Kontrol Serah Terima (Status Berurutan)</h3>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>No. Pesanan / Nota</th>
+                <th>Pembeli & Alamat</th>
+                <th>Detail Pesanan</th>
+                <th>Total</th>
+                <th>Status Berurutan</th>
+                <th>Kontrol & Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyWaOrders"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 2.3/2.4: PEMBELIAN, BEBAN & PRIVE -->
+      <section id="tab-pembelian" class="tab-panel">
+        <div class="section-header">
+          <h2>Menu 2.3 / 2.4 | Pembelian Persediaan, Beban & Prive</h2>
+        </div>
+        <div class="card">
+          <form onsubmit="submitExpenseOrPurchase(event)" class="form-grid-4">
+            <div>
+              <label>Jenis Transaksi</label>
+              <select id="expJenis" class="input-white" onchange="toggleExpFields()">
+                <option value="pembelian">Pembelian Persediaan (1102)</option>
+                <option value="beban">Beban Operasional (6101-6104)</option>
+                <option value="prive">Prive / Pengambilan Pribadi (3103)</option>
+              </select>
+            </div>
+            <div>
+              <label>Tanggal</label>
+              <input type="date" id="expTanggal" class="input-white" value="2026-11-24" required />
+            </div>
+            <div>
+              <label>Pemasok / Penerima</label>
+              <input type="text" id="expPemasok" class="input-white" placeholder="Toko Grosir Sumber Rejeki" required />
+            </div>
+            <div>
+              <label>No. Nota Pemasok / Bukti</label>
+              <input type="text" id="expRefNota" class="input-white" placeholder="SR-4471" required />
+            </div>
+
+            <!-- Jika pembelian barang -->
+            <div id="expBarangBox">
+              <label>Barang Masuk Stok</label>
+              <select id="expSelectBarang" class="input-white"></select>
+            </div>
+            <div id="expQtyBox">
+              <label>Qty Masuk (Satuan Jual)</label>
+              <input type="number" id="expQty" class="input-white" value="10" min="1" />
+            </div>
+            <div id="expEdBox">
+              <label>Tgl Kedaluwarsa Batch</label>
+              <input type="date" id="expEd" class="input-white" />
+            </div>
+
+            <!-- Jika beban -->
+            <div id="expAkunBox" style="display:none;">
+              <label>Akun Beban</label>
+              <select id="expAkunBeban" class="input-white">
+                <option value="6101">6101 - Beban Listrik dan Air</option>
+                <option value="6102">6102 - Beban Ongkos Antar/Angkut</option>
+                <option value="6103">6103 - Beban Perlengkapan</option>
+                <option value="6104">6104 - Beban Lain-lain</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Total Dibayar Tunai (Rp)</label>
+              <input type="number" id="expNominal" class="input-white" min="500" required />
+            </div>
+
+            <div class="full-col">
+              <label>Lampiran Foto Nota Pemasok (Wajib sebelum simpan - Kontrol K5)</label>
+              <input type="file" id="expFileNota" class="input-white" accept="image/*" required />
+            </div>
+
+            <div class="full-col">
+              <button type="submit" class="btn btn-primary">Simpan & Posting Jurnal Otomatis</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- TAB 2.5/2.6: OPNAME & BARANG RUSAK -->
+      <section id="tab-opname" class="tab-panel">
+        <div class="section-header">
+          <h2>Menu 2.5 / 2.6 | Berita Acara Stok Opname & Barang Rusak/ED</h2>
+        </div>
+        <div class="card">
+          <p class="hint-text">Stok sistem bersifat <strong>read-only (abu-abu)</strong>. Selisih &gt; Rp50.000 wajib otorisasi PIN Pemilik (kuning).</p>
+          <form onsubmit="submitOpname(event)" class="form-grid-4 mt-12">
+            <div>
+              <label>Pilih Barang</label>
+              <select id="opBarang" class="input-white" onchange="updateOpSistemStok()" required></select>
+            </div>
+            <div>
+              <label>Stok Sistem (Auto)</label>
+              <input type="number" id="opStokSistem" class="input-gray" readonly />
+            </div>
+            <div>
+              <label>Stok Fisik Hasil Hitung</label>
+              <input type="number" id="opStokFisik" class="input-white" min="0" required />
+            </div>
+            <div>
+              <label>Alasan Selisih (Wajib)</label>
+              <select id="opAlasan" class="input-white">
+                <option value="Kedaluwarsa (ED)">Kedaluwarsa (ED)</option>
+                <option value="Rusak / Kemasan Penyok">Rusak / Kemasan Penyok</option>
+                <option value="Selisih Hitung Opname">Selisih Hitung Opname</option>
+              </select>
+            </div>
+            <div class="full-col">
+              <button type="submit" class="btn btn-primary">Proses Berita Acara & Jurnal Penyesuaian</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- TAB 2.7: REKONSILIASI KAS -->
+      <section id="tab-rekonsiliasi" class="tab-panel">
+        <div class="section-header">
+          <h2>Menu 2.7 | Rekonsiliasi Kas Harian (Tutup Toko)</h2>
+        </div>
+        <div class="card">
+          <form onsubmit="submitRekonsiliasi(event)" class="form-grid-4">
+            <div>
+              <label>Saldo Kas Menurut Sistem (Auto)</label>
+              <input type="text" id="rekKasSistem" class="input-gray" readonly />
+            </div>
+            <div>
+              <label>Uang Fisik di Laci Kasir (Rp)</label>
+              <input type="number" id="rekKasFisik" class="input-white" oninput="calcRekSelisih()" required />
+            </div>
+            <div>
+              <label>Selisih Kas (Auto)</label>
+              <input type="text" id="rekSelisih" class="input-yellow" readonly value="Rp 0" />
+            </div>
+            <div>
+              <label>Alasan Selisih (Wajib jika ≠ 0)</label>
+              <input type="text" id="rekAlasan" class="input-white" placeholder="Contoh: Uang kembalian receh kurang" />
+            </div>
+            <div class="full-col">
+              <button type="submit" class="btn btn-primary">Simpan Rekonsiliasi Harian</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- TAB 3.1: LABA RUGI -->
+      <section id="tab-laba-rugi" class="tab-panel">
+        <div class="section-header">
+          <h2>Menu 3.1 | Laporan Laba Rugi (SAK EMKM)</h2>
+          <button class="btn btn-secondary" onclick="window.print()">Cetak Laporan</button>
+        </div>
+        <div class="card report-paper" id="reportLabaRugi"></div>
+      </section>
+
+      <!-- TAB 3.2: NERACA -->
+      <section id="tab-neraca" class="tab-panel">
+        <div class="section-header">
+          <h2>Menu 3.2 | Laporan Posisi Keuangan / Neraca (SAK EMKM)</h2>
+          <button class="btn btn-secondary" onclick="window.print()">Cetak Neraca</button>
+        </div>
+        <div class="card report-paper" id="reportNeraca"></div>
+      </section>
+
+      <!-- TAB 3.3: REKAP PAJAK -->
+      <section id="tab-pajak" class="tab-panel">
+        <div class="section-header">
+          <h2>Menu 3.3 | Rekapitulasi Pajak PPh Final 0,5% (PP 55/2022)</h2>
+        </div>
+        <div class="card">
+          <div class="tax-meter-box">
+            <div class="tax-header">
+              <span>Progres Omzet Kumulatif Terhadap Batas Bebas Pajak WP OP (Rp 500.000.000)</span>
+              <strong id="taxPercentLabel">27%</strong>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="taxProgressFill" style="width: 27%;"></div>
+            </div>
+            <p class="mt-8" id="taxSummaryText"></p>
+          </div>
+
+          <table class="data-table mt-16">
+            <thead>
+              <tr>
+                <th>Bulan (2026)</th>
+                <th>Omzet Bulan Ini (Rp)</th>
+                <th>Omzet Kumulatif (Rp)</th>
+                <th>Omzet Kena Pajak (&gt;500 Jt)</th>
+                <th>PPh Final 0,5% (Rp)</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyPajak"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 3.5: LAPORAN STOK -->
+      <section id="tab-lap-stok" class="tab-panel">
+        <div class="section-header">
+          <h2>Menu 3.5 | Laporan Stok Barang & Peringatan Kedaluwarsa</h2>
+        </div>
+        <div class="card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Kode</th>
+                <th>Nama Barang</th>
+                <th>Sat.</th>
+                <th>Stok Akhir</th>
+                <th>Batas Min.</th>
+                <th>ED Terdekat</th>
+                <th>Status Peringatan</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyLapStok"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 3.6: ARUS KAS -->
+      <section id="tab-arus-kas" class="tab-panel">
+        <div class="section-header">
+          <h2>Menu 3.6 | Rekap Arus Kas Bulanan</h2>
+        </div>
+        <div class="card report-paper" id="reportArusKas"></div>
+      </section>
+
+      <!-- TAB JURNAL -->
+      <section id="tab-jurnal" class="tab-panel">
+        <div class="section-header">
+          <h2>Buku Besar & Jurnal Umum Otomatis</h2>
+        </div>
+        <div class="card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Tanggal</th>
+                <th>No. Bukti</th>
+                <th>Keterangan</th>
+                <th>Akun</th>
+                <th>Debit (Rp)</th>
+                <th>Kredit (Rp)</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyJurnal"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 4.2: AUDIT & BACKUP -->
+      <section id="tab-audit" class="tab-panel">
+        <div class="section-header">
+          <h2>Menu 4.2 & 4.4 | Log Audit (Audit Trail) & Backup Data</h2>
+          <div class="action-bar">
+            <button class="btn btn-primary" onclick="exportBackup()">Unduh Backup JSON</button>
+            <button class="btn btn-danger" onclick="resetDemoData()">Reset Data Ilustrasi</button>
+          </div>
+        </div>
+        <div class="card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Waktu</th>
+                <th>Peran</th>
+                <th>Aktivitas</th>
+                <th>Detail / Otorisasi</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyAudit"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL NOTA CETAK -->
+  <div id="notaModal" class="modal">
+    <div class="modal-content">
+      <div id="notaPrintArea" class="receipt-box"></div>
+      <div class="action-bar mt-16">
+        <button class="btn btn-primary" onclick="window.print()">Cetak Struk</button>
+        <button class="btn btn-secondary" onclick="closeModal('notaModal')">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
